@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to IP ServiceNow Copilot</title>
+    <link rel="icon" type="image/svg+xml" href="https://internationalpaper.com/themes/custom/themekit/logo.svg">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+        #heading {
+            background-color: white;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        h1 {
+            font-size: 16px;
+            line-height: 20px;
+            color: #006963;
+            margin: 0;
+        }
+        #chat-icon {
+            height: 30px;
+            margin-right: 20px;
+        }
+        #webchat {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+        #footer {
+            background-color: white;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 -2px 4px rgba(0,0,0,0.1);
+        }
+        #file-upload {
+            display: none;
+        }
+        .file-upload-label {
+            background-color: #006963;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .file-upload-label:hover {
+            background-color: #005750;
+        }
+        #virtual-agent-button {
+            background-color: #006963;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        #virtual-agent-button:hover {
+            background-color: #005750;
+        }
+        #virtual-agent-button img {
+            height: 20px;
+            margin-right: 8px;
+        }
+        #copyright {
+            font-size: 12px;
+            color: #006963;
+        }
+    </style>
+</head>
+<body>
+    <div id="heading">
+        <div class="header-left">
+            <img id="chat-icon" src="https://internationalpaper.com/themes/custom/themekit/logo.svg" alt="Chat Icon">
+            <h1>Welcome to IP ServiceNow Copilot</h1>
+        </div>
+        <button id="virtual-agent-button" onclick="openVirtualAgent()">
+            <img src="https://support.servicenow.com/images/sp-agent-chat-icon.svg" alt="Virtual Agent Icon">
+            Virtual Agent
+        </button>
+    </div>
+    <div id="webchat" role="main"></div>
+    <div id="footer">
+        <div class="file-upload-container">
+            <label for="file-upload" class="file-upload-label">
+                Attach File
+            </label>
+            <input type="file" id="file-upload" />
+        </div>
+        <div id="copyright">©2024 International Paper. All Rights Reserved.</div>
+    </div>
+
+    <script src="https://cdn.botframework.com/botframework-webchat/latest/webchat.js"></script>
+    <script>
+        const styleOptions = {
+            hideUploadButton: true,
+            backgroundColor: '#f5f5f5',
+            bubbleBackground: '#e6e6e6',
+            bubbleBorderRadius: 10,
+            bubbleFromUserBackground: '#006963',
+            bubbleFromUserBorderRadius: 10,
+            bubbleFromUserTextColor: 'white',
+        };
+
+        const theURL = "https://c46ec9c7c6bbea84a088fce9b50dca.13.environment.api.powerplatform.com/powervirtualagents/botsbyschema/msdyn_AgentCopilot/directline/token?api-version=2022-03-01-preview";
+        const environmentEndPoint = theURL.slice(0, theURL.indexOf('/powervirtualagents'));
+        const apiVersion = theURL.slice(theURL.indexOf('api-version')).split('=')[1];
+        const regionalChannelSettingsURL = `${environmentEndPoint}/powervirtualagents/regionalchannelsettings?api-version=${apiVersion}`;
+
+        let directline;
+
+        fetch(regionalChannelSettingsURL)
+            .then(response => response.json())
+            .then(data => {
+                directline = data.channelUrlsById.directline;
+                return fetch(theURL);
+            })
+            .then(response => response.json())
+            .then(conversationInfo => {
+                window.WebChat.renderWebChat(
+                    {
+                        directLine: window.WebChat.createDirectLine({
+                            domain: `${directline}v3/directline`,
+                            token: conversationInfo.token,
+                        }),
+                        styleOptions
+                    },
+                    document.getElementById('webchat')
+                );
+
+                // File upload functionality
+                const fileUpload = document.getElementById('file-upload');
+                fileUpload.addEventListener('change', (event) => {
+                    const file = event.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const content = e.target.result;
+                            // Send file content to the bot
+                            window.WebChat.postActivity({
+                                type: 'message',
+                                text: `Uploaded file: ${file.name}`,
+                                attachments: [{
+                                    contentType: file.type,
+                                    contentUrl: content,
+                                    name: file.name
+                                }]
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            })
+            .catch(err => console.error("An error occurred: " + err));
+
+        function openVirtualAgent() {
+            window.open('https://ipaper.service-now.com/$sn-va-web-client-app.do', '_blank');
+        }
+    </script>
+</body>
+</html>
